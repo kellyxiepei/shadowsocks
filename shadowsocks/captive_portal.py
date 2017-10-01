@@ -11,6 +11,8 @@ class CaptivePortalGate(object):
                             remote_port) in self._address_white_list
         return is_login or is_in_white_list
 
+    def is_login(self, client_ip):
+        return self._user_map.get(client_ip, False)
+
     def login(self, client_ip):
         self._user_map[client_ip] = True
-
