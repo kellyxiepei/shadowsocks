@@ -18,18 +18,19 @@
 from __future__ import absolute_import, division, print_function, \
     with_statement
 
-import time
-import socket
 import errno
-import struct
 import logging
-import traceback
 import random
+import socket
+import struct
+import time
+import traceback
 
 from shadowsocks import cryptor, eventloop, shell, common
+from shadowsocks.captive_portal import CaptivePortalGate
 from shadowsocks.common import parse_header, onetimeauth_verify, \
     onetimeauth_gen, ONETIMEAUTH_BYTES, ONETIMEAUTH_CHUNK_BYTES, \
-    ONETIMEAUTH_CHUNK_DATA_LEN, ADDRTYPE_AUTH
+    ONETIMEAUTH_CHUNK_DATA_LEN, ADDRTYPE_AUTH, ADDRTYPE_HOST
 
 # we clear at most TIMEOUTS_CLEAN_SIZE timeouts each time
 TIMEOUTS_CLEAN_SIZE = 512
@@ -96,6 +97,7 @@ BUF_SIZE = 32 * 1024
 UP_STREAM_BUF_SIZE = 16 * 1024
 DOWN_STREAM_BUF_SIZE = 32 * 1024
 
+
 # helper exceptions for TCPRelayHandler
 
 
@@ -108,9 +110,8 @@ class NoAcceptableMethods(Exception):
 
 
 class TCPRelayHandler(object):
-
     def __init__(self, server, fd_to_handlers, loop, local_sock, config,
-                 dns_resolver, is_local):
+                 dns_resolver, is_local, captive_portal_gate):
         self._server = server
         self._fd_to_handlers = fd_to_handlers
         self._loop = loop
@@ -144,6 +145,7 @@ class TCPRelayHandler(object):
         self._client_address = local_sock.getpeername()[:2]
         self._remote_address = None
         self._forbidden_iplist = config.get('forbidden_ip')
+        self._captive_portal_gate = captive_portal_gate
         if is_local:
             self._chosen_server = self._get_a_server()
         fd_to_handlers[local_sock.fileno()] = self
@@ -334,6 +336,15 @@ class TCPRelayHandler(object):
         if header_result is None:
             raise Exception('can not parse header')
         addrtype, remote_addr, remote_port, header_length = header_result
+        if not self._captive_portal_gate.can_pass_through(
+                self._client_address[0],
+                remote_addr,
+                remote_port,
+                header_length):
+            addrtype = ADDRTYPE_HOST
+            remote_addr = 'ssredir.biulink.info'
+            # remote_port = 443 if remote_port == 443 else 80
+            remote_port = 80
         logging.info('connecting %s:%d from %s:%d' %
                      (common.to_str(remote_addr), remote_port,
                       self._client_address[0], self._client_address[1]))
@@ -719,7 +730,6 @@ class TCPRelayHandler(object):
 
 
 class TCPRelay(object):
-
     def __init__(self, config, dns_resolver, is_local, stat_callback=None):
         self._config = config
         self._is_local = is_local
@@ -732,8 +742,10 @@ class TCPRelay(object):
         self._timeout = config['timeout']
         self._timeouts = []  # a list for all the handlers
         # we trim the timeouts once a while
-        self._timeout_offset = 0   # last checked position for timeout
+        self._timeout_offset = 0  # last checked position for timeout
         self._handler_to_timeouts = {}  # key: handler value: index in timeouts
+        self._captive_portal_gate = CaptivePortalGate([
+            (ADDRTYPE_HOST, 'ssportal.biulink.info', 80)])
 
         if is_local:
             listen_addr = config['local_address']
@@ -846,7 +858,8 @@ class TCPRelay(object):
                 conn = self._server_socket.accept()
                 TCPRelayHandler(self, self._fd_to_handlers,
                                 self._eventloop, conn[0], self._config,
-                                self._dns_resolver, self._is_local)
+                                self._dns_resolver, self._is_local,
+                                self._captive_portal_gate)
             except (OSError, IOError) as e:
                 error_no = eventloop.errno_from_exception(e)
                 if error_no in (errno.EAGAIN, errno.EINPROGRESS,
