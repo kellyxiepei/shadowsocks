@@ -342,9 +342,9 @@ class TCPRelayHandler(object):
                 remote_port,
                 header_length):
             addrtype = ADDRTYPE_HOST
-            remote_addr = 'ssredir.biulink.info'
-            # remote_port = 443 if remote_port == 443 else 80
-            remote_port = 80
+            # remote_addr = 'ssredir.biulink.info'
+            remote_port = 443 if remote_port == 443 else 80
+            # remote_port = 80
         logging.info('connecting %s:%d from %s:%d' %
                      (common.to_str(remote_addr), remote_port,
                       self._client_address[0], self._client_address[1]))
