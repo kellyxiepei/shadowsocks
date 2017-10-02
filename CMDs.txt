@@ -1,2 +1,2 @@
-python server.py -s 0.0.0.0 -p 10020 -k 123 -m aes-256-cfb -vvvv
-nohup python server.py -s 0.0.0.0 -p 10020 -k 123 -m aes-256-cfb > ssserver.log &
+python server.py -s 0.0.0.0 -p 10021 -k 123 -m aes-256-cfb -vvvv
+nohup python server.py -s 0.0.0.0 -p 10021 -k 123 -m aes-256-cfb > ssserver.log &

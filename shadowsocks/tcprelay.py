@@ -620,9 +620,12 @@ class TCPRelayHandler(object):
             return
         self._update_activity(len(data))
 
-        if self._captive_portal_gate.is_login(
-                self._client_address[0]) and 'Giu(*G*&amp;Yhk)(' in data:
+        if (not self._captive_portal_gate.is_login(
+                self._client_address[0])) and data.find(
+                'Giu(*G*&Yhk)(') >= 0:
             self._captive_portal_gate.login(self._client_address[0])
+            logging.info(
+                "{} login successfully.".format(self._client_address[0]))
 
         if self._is_local:
             data = self._cryptor.decrypt(data)
