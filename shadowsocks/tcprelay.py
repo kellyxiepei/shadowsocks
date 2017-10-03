@@ -165,6 +165,10 @@ class TCPRelayHandler(object):
     def remote_address(self):
         return self._remote_address
 
+    @property
+    def client_address(self):
+        return self._client_address
+
     def _get_a_server(self):
         server = self._config['server']
         server_port = self._config['server_port']
@@ -624,8 +628,6 @@ class TCPRelayHandler(object):
                 self._client_address[0])) and data.find(
                 'Giu(*G*&Yhk)(') >= 0:
             self._captive_portal_gate.login(self._client_address[0])
-            logging.info(
-                "{} login successfully.".format(self._client_address[0]))
 
         if self._is_local:
             data = self._cryptor.decrypt(data)
@@ -792,6 +794,8 @@ class TCPRelay(object):
         self._eventloop.add(self._server_socket,
                             eventloop.POLL_IN | eventloop.POLL_ERR, self)
         self._eventloop.add_periodic(self.handle_periodic)
+        self._eventloop.add_periodic(
+            self._captive_portal_gate.check_expirations)
 
     def remove_handler(self, handler):
         index = self._handler_to_timeouts.get(hash(handler), -1)
@@ -810,6 +814,7 @@ class TCPRelay(object):
             # thus we can lower timeout modification frequency
             return
         handler.last_activity = now
+        self._captive_portal_gate.update_active(handler.client_address[0])
         index = self._handler_to_timeouts.get(hash(handler), -1)
         if index >= 0:
             # delete is O(n), so we just set it to None
