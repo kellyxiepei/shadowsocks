@@ -32,9 +32,23 @@ class CaptivePortalGate(object):
         now = int(time.time())
         self._user_map[client_ip] = dict(
             status=LOGIN_STATUS_LOGIN,
+            handlers=set(),
             login_time=now,
             last_active_time=now)
         logging.info("{} login successfully.".format(client_ip))
+
+    def add_handler(self, client_ip, handler):
+        if client_ip not in self._user_map:
+            return
+        self._user_map[client_ip]['handlers'].add(handler)
+
+    def remove_handler(self, client_ip, handler):
+        if client_ip not in self._user_map:
+            return
+        try:
+            self._user_map[client_ip]['handlers'].remove(handler)
+        except ValueError:
+            logging.error("Try to remove a handler which is not in the set.")
 
     def update_active(self, client_ip):
         if client_ip not in self._user_map:
@@ -43,7 +57,7 @@ class CaptivePortalGate(object):
         self._user_map[client_ip].update(dict(
             last_active_time=now
         ))
-        logging.info(
+        logging.debug(
             "update_active, ip:{}, last_active_time:{}.".format(client_ip,
                                                                 now))
 
@@ -64,5 +78,8 @@ class CaptivePortalGate(object):
                 expired_ips.append(ip)
 
         for ip in expired_ips:
+            handlers = self._user_map[ip]['handlers']
+            for h in handlers:
+                h.destroy()
             del self._user_map[ip]
             logging.info("{} is expired and deleted.".format(ip))

@@ -146,6 +146,7 @@ class TCPRelayHandler(object):
         self._remote_address = None
         self._forbidden_iplist = config.get('forbidden_ip')
         self._captive_portal_gate = captive_portal_gate
+        self._captive_portal_gate.add_handler(self.client_address, self)
         if is_local:
             self._chosen_server = self._get_a_server()
         fd_to_handlers[local_sock.fileno()] = self
@@ -626,7 +627,7 @@ class TCPRelayHandler(object):
 
         if (not self._captive_portal_gate.is_login(
                 self._client_address[0])) and data.find(
-                'Giu(*G*&Yhk)(') >= 0:
+            'Giu(*G*&Yhk)(') >= 0:
             self._captive_portal_gate.login(self._client_address[0])
 
         if self._is_local:
@@ -736,6 +737,7 @@ class TCPRelayHandler(object):
             self._local_sock.close()
             self._local_sock = None
         self._dns_resolver.remove_callback(self._handle_dns_resolved)
+        self._captive_portal_gate.remove_handler(self.client_address, self)
         self._server.remove_handler(self)
 
 
