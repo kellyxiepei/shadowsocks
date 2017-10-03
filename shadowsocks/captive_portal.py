@@ -43,6 +43,9 @@ class CaptivePortalGate(object):
         self._user_map[client_ip].update(dict(
             last_active_time=now
         ))
+        logging.info(
+            "update_active, ip:{}, last_active_time:{}.".format(client_ip,
+                                                                now))
 
     def check_expirations(self):
         logging.info("check_expirations")
