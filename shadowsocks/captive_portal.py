@@ -10,7 +10,7 @@ LOGIN_STATUS_LOGIN = 1
 class CaptivePortalGate(object):
     def __init__(self, address_white_list,
                  login_expiration_time=43200,
-                 inactive_expiration_time=600):
+                 inactive_expiration_time=60):
         self._user_map = {}  # key: IP address, value:is_login
         self._address_white_list = address_white_list
         self._login_expiration_time = login_expiration_time
