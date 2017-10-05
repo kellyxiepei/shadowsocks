@@ -1,2 +1,2 @@
-python server.py -s 0.0.0.0 -p 10021 -k 123 -m aes-256-cfb -vvvv
+python server.py -s 0.0.0.0 -p 10021 -k 123 -m aes-256-cfb --no-login-white-list=3:ssportal.biulink.info:80 -vvvv
 nohup python server.py -s 0.0.0.0 -p 10021 -k 123 -m aes-256-cfb > ssserver.log &

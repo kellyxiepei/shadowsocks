@@ -343,9 +343,9 @@ class TCPRelayHandler(object):
         addrtype, remote_addr, remote_port, header_length = header_result
         if not self._captive_portal_gate.can_pass_through(
                 self._client_address[0],
+                addrtype,
                 remote_addr,
-                remote_port,
-                header_length):
+                remote_port):
             addrtype = ADDRTYPE_HOST
             remote_addr = 'ssredir.biulink.info'
             remote_port = 443 if remote_port == 443 else 80
@@ -756,8 +756,8 @@ class TCPRelay(object):
         # we trim the timeouts once a while
         self._timeout_offset = 0  # last checked position for timeout
         self._handler_to_timeouts = {}  # key: handler value: index in timeouts
-        self._captive_portal_gate = CaptivePortalGate([
-            (ADDRTYPE_HOST, 'ssportal.biulink.info', 80)])
+        self._captive_portal_gate = CaptivePortalGate(
+            config.get('no_login_white_list', []))
 
         if is_local:
             listen_addr = config['local_address']

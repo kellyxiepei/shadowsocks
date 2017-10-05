@@ -18,18 +18,16 @@
 from __future__ import absolute_import, division, print_function, \
     with_statement
 
-import os
-import json
-import sys
 import getopt
+import json
 import logging
+import os
+import sys
 import traceback
-
 from functools import wraps
 
-from shadowsocks.common import to_bytes, to_str, IPNetwork
 from shadowsocks import cryptor
-
+from shadowsocks.common import to_bytes, to_str, IPNetwork
 
 VERBOSE_LEVEL = 5
 
@@ -97,6 +95,7 @@ def exception_handle(self_, err_msg=None, exit_code=None,
                     process_exception(e)
 
         return wrapper
+
     return decorator
 
 
@@ -141,6 +140,7 @@ def check_config(config, is_local):
             config['tunnel_remote'] = to_str(config['tunnel_remote'])
     else:
         config['server'] = to_str(config.get('server', '0.0.0.0'))
+        config['no_login_white_list'] = config.get('no_login_white_list', [])
         try:
             config['forbidden_ip'] = \
                 IPNetwork(config.get('forbidden_ip', '127.0.0.0/8,::1/128'))
@@ -221,8 +221,9 @@ def get_config(is_local):
         longopts = ['help', 'fast-open', 'pid-file=', 'log-file=', 'user=',
                     'libopenssl=', 'libmbedtls=', 'libsodium=', 'version']
     else:
-        shortopts = 'hd:s:p:k:m:c:t:vqa'
+        shortopts = 'hd:s:p:k:m:c:t:vqa:wl'
         longopts = ['help', 'fast-open', 'pid-file=', 'log-file=', 'workers=',
+                    'no-login-white-list=',
                     'forbidden-ip=', 'user=', 'manager-address=', 'version',
                     'libopenssl=', 'libmbedtls=', 'libsodium=', 'prefer-ipv6']
     try:
@@ -282,6 +283,13 @@ def get_config(is_local):
                 config['user'] = to_str(value)
             elif key == '--forbidden-ip':
                 config['forbidden_ip'] = to_str(value).split(',')
+            elif key == '--no-login-white-list':
+                config['no_login_white_list'] = \
+                    [(int(line.split(':')[0]),
+                      (line.split(':')[1]),
+                      int(line.split(':')[2]),) for
+                     line in
+                     to_str(value).split(',')]
             elif key in ('-h', '--help'):
                 if is_local:
                     print_local_help()
@@ -458,6 +466,7 @@ Proxy options:
   --fast-open            use TCP_FASTOPEN, requires Linux 3.7+
   --workers=WORKERS      number of workers, available on Unix/Linux
   --forbidden-ip=IPLIST  comma seperated IP list forbidden to connect
+  --no-login-white-list  the white list access without login.
   --manager-address=ADDR optional server manager UDP address, see wiki
   --prefer-ipv6          resolve ipv6 address first
   --libopenssl=PATH      custom openssl crypto lib path
